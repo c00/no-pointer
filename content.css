@@ -1,0 +1,15 @@
+#no-pointer-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 20000;
+}
+
+#no-pointer-container .npc-link {
+    background-color: rgba(154, 205, 50, 0.5);
+    border: 1px solid darkgoldenrod;
+    position: absolute;
+    padding: 0 8px;
+    font-size: .8em;
+    border-radius: 2px;
+} 
