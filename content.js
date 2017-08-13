@@ -1,7 +1,11 @@
 //Temporary Bindings
+let possibleBindings = '1234567890qwertyuiopasdfghjklzxcvbnm';
 let bindings = [];
 let links = null;
 let inputs = null;
+let page = 0;
+
+let inputSelector = 'input:visible, select:visible, textarea, [contenteditable]';
 
 init();
 
@@ -11,7 +15,7 @@ function init() {
     
     // Binding for clicking links
     Mousetrap.bind(['command+shift+a', 'ctrl+shift+a'], function(e) {
-        resetBindings();
+        resetBindings(true);
         
         //bind escape to cancel
         Mousetrap.bind('esc', resetBindings);
@@ -25,17 +29,15 @@ function init() {
         
     // Binding for ctrl clicking links
     Mousetrap.bind(['command+alt+a', 'ctrl+alt+a'], function(e) {
-        resetBindings();
+        resetBindings(true);
         
         //bind escape to cancel
         Mousetrap.bind('esc', function(){
             resetBindings();
         });
         
-        //find all links
-        $('a:visible, button:visible:enabled').each(function() {
-            addBinding(this, true);
-        });
+        prioritizeLinksAndButtons();
+        bindLinksAndButtons(true);
         
         return false;
     });
@@ -50,26 +52,44 @@ function init() {
         });
         
         //find all links
-        $('input:visible, textarea, select:visible').each(function() {
+        $(inputSelector).each(function() {
             if (isElementInViewport(this)) addBinding(this);
-            console.log("binding");
         });
         
         return false;
     });
+
+    //Also do things in forms
+     Mousetrap.prototype.stopCallback = function () {
+        return false;
+    } 
 }
 
 function bindLinksAndButtons(inNewTab) {
-    //check visible and enabled
-    for (let i = 0; i < links.length; i++) {
+    //Determine start and end
+    let start = page * possibleBindings.length;
+    if (links.length < start) {
+        start = 0;
+        page = 0;
+    }
+    let end = start + possibleBindings.length;
+    if (links.length <= end) end = links.length -1;
+    
+    let bindingCounter = 0;
+    for (let i = start; i < links.length; i++) {
         link = links[i];
         $el = $(link.el);
 
+        //check visible
         if ($el.is(':visible') && isElementInViewport(link.el)){
             addBinding(link.el, inNewTab);
+            bindingCounter++;
         } 
+
+        if (bindingCounter >= possibleBindings.length) break;        
     }
 
+    page++;
 }
 
 function prioritizeLinksAndButtons() {
@@ -128,8 +148,9 @@ function bindKey(key, el, inNewTab) {
                 window.open(link);            
             }
             
-        } else if ($el.is('input') || $el.is('textarea')|| $el.is('select')) {
+        } else if ($el.is(inputSelector) ) {
             //input / select / text area
+            console.log('input');
             el.focus();
         }
         
@@ -140,15 +161,13 @@ function bindKey(key, el, inNewTab) {
 }
 
 function getFreeBinding() {
-    let options = '1234567890qwertyuiopasdfghjklzxcvbnm';
+
+    if (bindings.length === possibleBindings.length) throw new Error('No more bindings available');
     
-    //todo build in scrolling abilities for the next/prev 36
-    if (bindings.length === options.length) throw new Error('No more bindings available');
-    
-    return options[bindings.length];
+    return possibleBindings[bindings.length];
 }
 
-function resetBindings() {
+function resetBindings(keepPage) {
     for (let i = 0; i < bindings.length; i++) {
         let binding = bindings[i];
         binding.el.remove();
@@ -156,6 +175,7 @@ function resetBindings() {
     }
     Mousetrap.unbind('esc');
     bindings = [];
+    if (keepPage !== true) page = 0;
 }
 
 // https://stackoverflow.com/questions/123999/how-to-tell-if-a-dom-element-is-visible-in-the-current-viewport
@@ -164,6 +184,11 @@ function isElementInViewport (el) {
     if (typeof jQuery === "function" && el instanceof jQuery) {
         el = el[0];
     }
+
+    //check display (needed for textarea)
+    let style = window.getComputedStyle(el, null);
+    let display = style.getPropertyValue('display');
+    if (display === 'none') return false;
     
     var rect = el.getBoundingClientRect();
     
