@@ -1,92 +1,134 @@
 //Temporary Bindings
 let bindings = [];
+let links = null;
+let inputs = null;
 
-//Root html element to put stuff in
-$('body').append(`<div id="no-pointer-container"></div>`)
+init();
 
-
-// Binding for clicking links
-Mousetrap.bind(['command+shift+a', 'ctrl+shift+a'], function(e) {
-    resetBindings();
+function init() {
+    //Root html element to put stuff in
+    $('body').append(`<div id="no-pointer-container"></div>`)
     
-    //bind escape to cancel
-    Mousetrap.bind('esc', function(){
+    // Binding for clicking links
+    Mousetrap.bind(['command+shift+a', 'ctrl+shift+a'], function(e) {
         resetBindings();
-    });
-    
-    //find all links
-    $('a:visible, button:visible:enabled').each(function() {
-        addBinding(this);
-    });
-    
-    return false;
-});
+        
+        //bind escape to cancel
+        Mousetrap.bind('esc', resetBindings);
+        $(window).one('scroll', resetBindings);
+        $(window).one('click', resetBindings);
 
-//Binding for selecting Inputs
-Mousetrap.bind(['command+shift+s', 'ctrl+shift+s'], function(e) {
-    resetBindings();
-    
-    //bind escape to cancel
-    Mousetrap.bind('esc', function(){
+        
+        prioritizeLinksAndButtons();
+        bindLinksAndButtons();
+        
+        return false;
+    });
+        
+    // Binding for ctrl clicking links
+    Mousetrap.bind(['command+alt+a', 'ctrl+alt+a'], function(e) {
         resetBindings();
+        
+        //bind escape to cancel
+        Mousetrap.bind('esc', function(){
+            resetBindings();
+        });
+        
+        //find all links
+        $('a:visible, button:visible:enabled').each(function() {
+            addBinding(this, true);
+        });
+        
+        return false;
     });
     
-    //find all links
-    $('input:visible').each(function() {
-        addBinding(this);
+    //Binding for selecting Inputs
+    Mousetrap.bind(['command+shift+s', 'ctrl+shift+s'], function(e) {
+        resetBindings();
+        
+        //bind escape to cancel
+        Mousetrap.bind('esc', function(){
+            resetBindings();
+        });
+        
+        //find all links
+        $('input:visible').each(function() {
+            addBinding(this);
+        });
+        
+        return false;
     });
-    
-    return false;
-});
+}
 
-function addBinding(el) {
+function bindLinksAndButtons(inNewTab) {
+    //check visible and enabled
+    for (let i = 0; i < links.length; i++) {
+        link = links[i];
+        $el = $(link.el);
+
+        if ($el.is(':visible') && isElementInViewport(link.el)){
+            addBinding(link.el, inNewTab);
+        } 
+    }
+
+}
+
+function prioritizeLinksAndButtons() {
+    let unsorted = [];
+    $('a, button').each(function() {        
+        var fontSize = parseFloat( window.getComputedStyle(this, null).getPropertyValue('font-size'));
+
+        let score = fontSize;
+
+        unsorted.push({el: this, score: score});
+    });
+
+    //sort
+    links = unsorted.sort(function(a, b) {
+        if (a.score > b.score) return -1;
+        if (a.score < b.score) return 1;
+        return 0;
+    });
+}
+
+function addBinding(el, inNewTab) {
     let $el = $(el);
     let key = getFreeBinding()
     
-    bindKey(key, el);
-    bindCtrlKey(key, el);
+    bindKey(key, el, inNewTab);
     
     //Add the element
     let $linkEl = $(`<span class="npc-link">${key}</span>`);
     $('#no-pointer-container').append($linkEl);
     //position
     let position = $el.offset();
-    let top = position.top + $el.outerHeight() - ($linkEl.height() / 1.5);
+    let top = position.top + $el.outerHeight() - ($linkEl.height() / 1.5) - window.scrollY;
     $linkEl.css({top: top, left: position.left});
     
     //Add to bindings
     bindings.push({key: key, el: $linkEl});
 }
 
-function bindKey(key, el) {
+function bindKey(key, el, inNewTab) {
     Mousetrap.bind(key, function(){
         $el = $(el);
         
-        if ($el.is('button') || $el.is('a')){
-            //link
+        if ($el.is('button')){
+            //button
             el.click();
+        } else if ($el.is('a')){
+            if (!inNewTab) {
+                el.click();
+            }else {
+                //Link (new window)
+                let link = $el.attr('href');
+                window.open(link);            
+            }
+            
         } else if ($el.is('input')){
             //input
             el.focus();
         }        
-        
-        resetBindings();
-        
-        return false;
-    });
-}
-
-function bindCtrlKey(key, el) {
-    Mousetrap.bind('ctrl+' + key, function(){
-        $el = $(el);
-
-        if ($el.is('button') || $el.is('a')){
-            //link
-            //todo get this to work...
-            var e = $.Event("click");
-            //e.ctrlKey = true;
-            $el.trigger(e);
-        }
         
         resetBindings();
         
@@ -111,4 +153,21 @@ function resetBindings() {
     }
     Mousetrap.unbind('esc');
     bindings = [];
+}
+
+// https://stackoverflow.com/questions/123999/how-to-tell-if-a-dom-element-is-visible-in-the-current-viewport
+function isElementInViewport (el) {
+    //special bonus for those using jQuery
+    if (typeof jQuery === "function" && el instanceof jQuery) {
+        el = el[0];
+    }
+    
+    var rect = el.getBoundingClientRect();
+    
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
 }
