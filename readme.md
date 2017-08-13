@@ -9,6 +9,10 @@ Press `ctrl+alt+a` to show keyboard shortcuts to links. Opens in a new tab.
 Press `ctrl+shift+s` to show keyboard shortcuts to inputs. Press any of the keys on screen to set focus to that input.
 
 ## Nice to haves
+Prioritize bold links
+Handle frames
+Add select to inputs
+ADD TEXTAREA to inputs
 Fix going to next 'page' of links
 Do something with selecting text on the page.
  - (Maybe find all [pre] tags, and do 'select first word', 'select sentence', 'select all' or something. Useful for copying code)

@@ -15,9 +15,7 @@ function init() {
         
         //bind escape to cancel
         Mousetrap.bind('esc', resetBindings);
-        $(window).one('scroll', resetBindings);
-        $(window).one('click', resetBindings);
-
+        $(window).one('scroll click resize', resetBindings);
         
         prioritizeLinksAndButtons();
         bindLinksAndButtons();
@@ -52,8 +50,9 @@ function init() {
         });
         
         //find all links
-        $('input:visible').each(function() {
-            addBinding(this);
+        $('input:visible, textarea, select:visible').each(function() {
+            if (isElementInViewport(this)) addBinding(this);
+            console.log("binding");
         });
         
         return false;
@@ -76,9 +75,13 @@ function bindLinksAndButtons(inNewTab) {
 function prioritizeLinksAndButtons() {
     let unsorted = [];
     $('a, button').each(function() {        
-        var fontSize = parseFloat( window.getComputedStyle(this, null).getPropertyValue('font-size'));
+        let style = window.getComputedStyle(this, null);
+
+        let fontSize = parseFloat(style.getPropertyValue('font-size'));
+        let bold = style.getPropertyValue('font-weight');
 
         let score = fontSize;
+        if (bold == 'bold') score += 3;
 
         unsorted.push({el: this, score: score});
     });
@@ -125,10 +128,10 @@ function bindKey(key, el, inNewTab) {
                 window.open(link);            
             }
             
-        } else if ($el.is('input')){
-            //input
+        } else if ($el.is('input') || $el.is('textarea')|| $el.is('select')) {
+            //input / select / text area
             el.focus();
-        }        
+        }
         
         resetBindings();
         
